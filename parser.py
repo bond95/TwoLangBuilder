@@ -216,7 +216,7 @@ def getTranslate(word, lang1, lang2):
         translate_res = translate.translate(word, lang1 + '-' + lang2)
         if translate_res['code'] == 200:
             addWordToElasticaOnlyIfTranslateExists(word, translate_res['text'][0], lang1, lang2)
-            print(translate_res['text'])
+            # print(translate_res['text'])
             return translate_res['text'][0]
         else:
             print(translate_res)
@@ -232,7 +232,7 @@ def getTranslate(word, lang1, lang2):
                 print(translate_res)
                 return None
         else:
-            print(res)
+            # print(res)
             return res['hits']['hits'][0]['_source']['word_' + lang2]
 
 onlyLetters = re.compile(r'[^a-zA-Zа-яА-Я ]+')
@@ -243,7 +243,9 @@ def getSentenceRate(keyWords, sentence):
     cleared_sentence = onlyLetters.sub('', sentence)
     word_array = cleared_sentence.split(' ')
     rate = 0.0
+    # print('getSentenceRate')
     # print(keyWords)
+    # print(sentence)
     for word in keyWords:
         res = process.extractOne(word, word_array)
         if res != None:
@@ -264,14 +266,14 @@ def getSentenceSub(sentence1, sentence2):
     word_array1 = list(filter(lambda x: len(x) > 2, word_array1))
     word_array2 = list(filter(lambda x: len(x) > 2, word_array2))
 
-    print(word_array1)
-    print(word_array2)
+    # print(word_array1)
+    # print(word_array2)
 
     sub = abs(len(word_array1) - len(word_array2))
-    print(sub)
+    # print(sub)
     maxWords = max(len(word_array1), len(word_array2))
     rate = 100 / float(maxWords) * (maxWords - sub)
-    print(rate)
+    # print(rate)
     return rate
 
 synced_sentences = []
@@ -282,12 +284,13 @@ def splitSentences():
         par['keywords1'] = []
         if 'first' in par.keys():
             keyWords = getNameWords.findall(par['first'])
-            print(keyWords)
+            keyWords = list(filter(lambda x: len(x) > 2, keyWords))
+            # print(keyWords)
             if len(keyWords) > 0:
                 for i in range(0, len(keyWords)):
                     res = getTranslate(keyWords[i], file1_lang, file2_lang)
-                    print(res)
-                    print('^')
+                    # print(res)
+                    # print('^')
                     if res != None:
                         par['keywords1'].append(res)                    
 
@@ -302,15 +305,15 @@ def splitSentences():
         if 'first' in sentences_pair[i].keys():
             rate = 0.0
             rate += getSentenceSub(sentences_pair[i]['first'], sentences_pair[j]['second'])
-            print('Rate 1:', rate)
+            # print('Rate 1:', rate)
             if len(sentences_pair[i]['keywords1']) > 0:
                 rate1 = getSentenceRate(sentences_pair[i]['keywords1'], sentences_pair[j]['second'])
                 
-                print('Rate 2:', rate1)
+                # print('Rate 2:', rate1)
                 rate += rate1
                 rate /= 2
-            print(sentences_pair[i]['first'], sentences_pair[j]['second'])
-            print('Rate: ', rate)
+            # print(sentences_pair[i]['first'], sentences_pair[j]['second'])
+            # print('Rate: ', rate)
             if rate < MIN_RATE:
                 if sync == True:
                     nonsynced_sentences['first'].append(sentences_pair[i]['first'])
