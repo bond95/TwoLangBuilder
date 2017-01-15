@@ -239,13 +239,16 @@ onlyLetters = re.compile(r'[^a-zA-Zа-яА-Я ]+')
 
 MIN_RATE = 75
 
-def getSentenceRate(keyWords, sentence):
+def getSentenceRate(keyWords, sentences):
+    sentence = ' '.join(sentences)
     cleared_sentence = onlyLetters.sub('', sentence)
     word_array = cleared_sentence.split(' ')
     rate = 0.0
     # print('getSentenceRate')
-    # print(keyWords)
-    # print(sentence)
+    print('//------------')
+    print(keyWords)
+    print('//------------')
+    print(sentence)
     for word in keyWords:
         res = process.extractOne(word, word_array)
         if res != None:
@@ -256,8 +259,18 @@ def getSentenceRate(keyWords, sentence):
     rate = rate / len(keyWords)
     return rate
 
+def getSentenceSize(sentence):
+    cleared_sentence = onlyLetters.sub('', sentence)
+    word_array = cleared_sentence.split(' ')
+    word_array = list(filter(lambda x: len(x) > 2, word_array))
+    return len(word_array)
 
-def getSentenceSub(sentence1, sentence2):
+def getSentenceSub(sentences1, sentences2):
+    sentence1 = ' '.join(sentences1)
+    sentence2 = ' '.join(sentences2)
+
+    print(sentence1, sentence2)
+
     cleared_sentence1 = onlyLetters.sub('', sentence1)
     cleared_sentence2 = onlyLetters.sub('', sentence2)
 
@@ -277,7 +290,7 @@ def getSentenceSub(sentence1, sentence2):
     return rate
 
 synced_sentences = []
-nonsynced_sentences = {'first': [], 'second': []}
+nonsynced_sentences = {'first': [], 'second': [], 'keywords': []}
 
 def splitSentences():
     for par in sentences_pair:
@@ -301,13 +314,28 @@ def splitSentences():
     reverse = False
     offsetoffset = 0
     nonsynced_count = 0
+    ns_sentence1_size = 0
+    ns_sentence2_size = 0
+    j_changed = True
+    i_changed = True
     while i < len(sentences_pair) and j < len(sentences_pair):
-        if 'first' in sentences_pair[i].keys():
+        if 'first' in sentences_pair[i].keys() and 'second' in sentences_pair[j].keys():
+            
+            if i_changed:
+                nonsynced_sentences['first'].append(sentences_pair[i]['first'])
+                nonsynced_sentences['keywords'].extend(sentences_pair[i]['keywords1'])
+                ns_sentence1_size += getSentenceSize(sentences_pair[i]['first'])
+            if j_changed:
+                nonsynced_sentences['second'].append(sentences_pair[j]['second'])
+                ns_sentence2_size += getSentenceSize(sentences_pair[j]['second'])
+            i_changed = False
+            j_changed = False
+
             rate = 0.0
-            rate += getSentenceSub(sentences_pair[i]['first'], sentences_pair[j]['second'])
+            rate += getSentenceSub(nonsynced_sentences['first'], nonsynced_sentences['second'])
             # print('Rate 1:', rate)
-            if len(sentences_pair[i]['keywords1']) > 0:
-                rate1 = getSentenceRate(sentences_pair[i]['keywords1'], sentences_pair[j]['second'])
+            if len(nonsynced_sentences['keywords']) > 0:
+                rate1 = getSentenceRate(nonsynced_sentences['keywords'], nonsynced_sentences['second'])
                 
                 # print('Rate 2:', rate1)
                 rate += rate1
@@ -315,39 +343,30 @@ def splitSentences():
             # print(sentences_pair[i]['first'], sentences_pair[j]['second'])
             # print('Rate: ', rate)
             if rate < MIN_RATE:
-                if sync == True:
-                    nonsynced_sentences['first'].append(sentences_pair[i]['first'])
                 sync = False
-                if offset >= 5:
-                    reverse = True
-                if reverse:
-                    nonsynced_sentences['first'].append(sentences_pair[i]['first'])
+                if ns_sentence1_size <= ns_sentence2_size:
+                    i_changed = True
                     i += 1
-                    offset = 0
                 else:
-                    nonsynced_sentences['second'].append(sentences_pair[j]['second'])
+                    j_changed = True
                     j += 1
-                    offset += 1
                 continue
             else:
-                if sync == False and offset > 0:
-                    reverse = True
-                    offset = 0
-                    if j + 1 == len(sentences_pair) or not 'second' in sentences_pair[j + 1]:
-                        break
-                    nonsynced_sentences['second'].append(sentences_pair[j + 1]['second'])
-                else:
-                    if reverse:
-                        synced_sentences.append({'first': ''.join(nonsynced_sentences['first']), 'second': ''.join(nonsynced_sentences['second'])})
-                        nonsynced_sentences['first'] = []
-                        nonsynced_sentences['second'] = []
-                    else:
-                        synced_sentences.append({'first': sentences_pair[i]['first'], 'second': sentences_pair[j]['second']})
-                    reverse = False
-                    sync = True
+                synced_sentences.append({'first': ' '.join(nonsynced_sentences['first']), 'second': ' '.join(nonsynced_sentences['second'])})
+                nonsynced_sentences['first'] = []
+                nonsynced_sentences['second'] = []
+                nonsynced_sentences['keywords'] = []
                 j += 1
                 i += 1
+                i_changed = True
+                j_changed = True
         else:
+            while 'first' in sentences_pair[i].keys():
+                nonsynced_sentences['first'].append(sentences_pair[i]['first'])
+                i += 1
+            while 'second' in sentences_pair[j].keys():
+                nonsynced_sentences['second'].append(sentences_pair[j]['second'])
+                j += 1
             break
 
     if len(nonsynced_sentences['first']) > 0:
